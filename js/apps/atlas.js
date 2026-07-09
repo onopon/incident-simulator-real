@@ -11,6 +11,9 @@
   let urlInput = null;
   let currentUrl = 'https://atlas.example.com/';
   let loadSeq = 0;
+  let findUi = null; // {bar, input, count} ページ内検索
+  let findHits = [];
+  let findIdx = 0;
 
   const AREAS = { 11: '埼玉県', 13: '東京都', 14: '神奈川県' };
   const SHOPS = {
@@ -145,9 +148,83 @@
     return inner;
   }
 
+  /* ---------------- ページ内検索（Cmd/Ctrl+F） ---------------- */
+  function clearFind() {
+    for (const m of findHits) {
+      const parent = m.parentNode;
+      if (!parent) continue;
+      parent.replaceChild(document.createTextNode(m.textContent), m);
+      parent.normalize();
+    }
+    findHits = [];
+    findIdx = 0;
+    if (findUi) findUi.count.textContent = '';
+  }
+
+  function runFind(query) {
+    clearFind();
+    if (!query || !viewEl) { return; }
+    const lq = query.toLowerCase();
+    const walker = document.createTreeWalker(viewEl, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (n.nodeValue.trim() && !n.parentNode.closest('mark')
+        ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const n of nodes) {
+      const text = n.nodeValue;
+      const lt = text.toLowerCase();
+      if (!lt.includes(lq)) continue;
+      const frag = document.createDocumentFragment();
+      let i = 0, idx;
+      while ((idx = lt.indexOf(lq, i)) >= 0) {
+        frag.appendChild(document.createTextNode(text.slice(i, idx)));
+        const mark = document.createElement('mark');
+        mark.className = 'at-find-hit';
+        mark.textContent = text.slice(idx, idx + query.length);
+        frag.appendChild(mark);
+        findHits.push(mark);
+        i = idx + query.length;
+      }
+      frag.appendChild(document.createTextNode(text.slice(i)));
+      n.parentNode.replaceChild(frag, n);
+    }
+    findIdx = 0;
+    focusHit();
+  }
+
+  function focusHit() {
+    if (!findUi) return;
+    findHits.forEach((m, i) => m.classList.toggle('active', i === findIdx));
+    findUi.count.textContent = findHits.length ? `${findIdx + 1} / ${findHits.length}` : '0件';
+    const cur = findHits[findIdx];
+    if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  function stepFind(dir) {
+    if (!findHits.length) return;
+    findIdx = (findIdx + dir + findHits.length) % findHits.length;
+    focusHit();
+  }
+
+  function openFind() {
+    if (!findUi) return;
+    findUi.bar.classList.remove('hidden');
+    findUi.input.focus();
+    findUi.input.select();
+    if (findUi.input.value) runFind(findUi.input.value);
+  }
+
+  function closeFind() {
+    if (!findUi) return;
+    clearFind();
+    findUi.bar.classList.add('hidden');
+  }
+
   /* ---------------- ナビゲーション（読み込みシミュレーション） ---------------- */
   function navigate(url, instant = false) {
     if (!viewEl) return;
+    clearFind();
     currentUrl = url;
     if (urlInput) urlInput.value = url;
     const seq = ++loadSeq;
@@ -224,13 +301,17 @@
 
   function renderPage(url) {
     viewEl.innerHTML = '';
-    if (url.includes('admin.atlas')) { viewEl.appendChild(pageAdmin()); return; }
-    if (url.includes('/search')) {
+    if (url.includes('admin.atlas')) { viewEl.appendChild(pageAdmin()); }
+    else if (url.includes('/search')) {
       const mArea = url.match(/area=(\d+)/);
       viewEl.appendChild(pageSearch(mArea ? mArea[1] : '13'));
-      return;
+    } else {
+      viewEl.appendChild(pageTop());
     }
-    viewEl.appendChild(pageTop());
+    /* 検索バーが開いたままなら、新しいページ内容に対して再検索する */
+    if (findUi && !findUi.bar.classList.contains('hidden') && findUi.input.value) {
+      runFind(findUi.input.value.trim());
+    }
   }
 
   /* ---------------- アプリ登録 ---------------- */
@@ -248,14 +329,39 @@
       urlInput = el('input', 'atlas-url');
       urlInput.value = currentUrl;
       urlInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
           let u = urlInput.value.trim();
           if (!/^https?:/.test(u)) u = 'https://' + u;
           navigate(u);
         }
       });
       urlbar.appendChild(urlInput);
-      chrome.append(back, reload, urlbar);
+      const findBtn = el('button', 'atlas-navbtn', '🔍');
+      findBtn.title = 'ページ内検索（⌘F / Ctrl+F）';
+      findBtn.onclick = () => openFind();
+      chrome.append(back, reload, urlbar, findBtn);
+
+      /* ページ内検索バー */
+      const findBar = el('div', 'atlas-findbar hidden');
+      const findInput = el('input', 'atlas-find-input');
+      findInput.placeholder = 'ページ内を検索（例: 埼玉）';
+      const findCount = el('span', 'atlas-find-count', '');
+      const prevB = el('button', 'atlas-navbtn', '∧');
+      prevB.title = '前へ（Shift+Enter）';
+      const nextB = el('button', 'atlas-navbtn', '∨');
+      nextB.title = '次へ（Enter）';
+      const closeB = el('button', 'atlas-navbtn', '✕');
+      findBar.append(findInput, findCount, prevB, nextB, closeB);
+      findUi = { bar: findBar, input: findInput, count: findCount };
+      prevB.onclick = () => stepFind(-1);
+      nextB.onclick = () => stepFind(1);
+      closeB.onclick = () => closeFind();
+      findInput.addEventListener('input', () => runFind(findInput.value.trim()));
+      findInput.addEventListener('keydown', (e) => {
+        if (e.isComposing || e.keyCode === 229) return;
+        if (e.key === 'Enter') { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
+        if (e.key === 'Escape') closeFind();
+      });
       const bms = el('div', 'atlas-bookmarks');
       const bmDefs = [
         ['🏠 Atlas トップ', 'https://atlas.example.com/'],
@@ -268,7 +374,7 @@
         bms.appendChild(b);
       }
       viewEl = el('div', 'atlas-view');
-      app.append(chrome, bms, viewEl);
+      app.append(chrome, bms, findBar, viewEl);
       body.appendChild(app);
 
       back.onclick = () => navigate('https://atlas.example.com/');
@@ -277,5 +383,15 @@
     },
   });
 
-  IS.atlasApp = { navigate };
+  /* Atlasウィンドウが前面にあるときは ⌘F/Ctrl+F をページ内検索として扱う */
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'F')) {
+      if (IS.wm.isVisible('atlas')) {
+        e.preventDefault();
+        openFind();
+      }
+    }
+  });
+
+  IS.atlasApp = { navigate, openFind };
 })();

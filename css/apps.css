@@ -227,6 +227,20 @@
 }
 .atlas-lock { color: #1d8102; font-size: 11px; }
 .atlas-url { flex: 1; border: none; outline: none; font-size: 12.5px; color: #202124; font-family: var(--mono); }
+/* ページ内検索バー */
+.atlas-findbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; background: #f1f3f4; border-bottom: 1px solid #cdd1d6;
+}
+.atlas-find-input {
+  width: 240px; padding: 5px 12px; border: 1px solid #cdd1d6; border-radius: 14px;
+  font-size: 12.5px; outline: none; color: #202124; background: #fff;
+}
+.atlas-find-input:focus { border-color: #4aa3ff; }
+.atlas-find-count { font-size: 11.5px; color: #5f6368; min-width: 56px; font-family: var(--mono); }
+mark.at-find-hit { background: #ffe58a; color: #202124; border-radius: 2px; padding: 0 1px; }
+mark.at-find-hit.active { background: #ff9632; color: #fff; }
+
 .atlas-bookmarks { flex: 0 0 30px; display: flex; gap: 4px; align-items: center; padding: 0 12px; background: #dee1e6; }
 .atlas-bm {
   background: none; border: none; font-size: 11.5px; color: #3c4043; padding: 3px 10px; border-radius: 12px;

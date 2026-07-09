@@ -455,7 +455,7 @@
 
       print('Atlas Ops Terminal ― 本番環境に接続しています。help でコマンド一覧。', 't-dim');
       inputEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { // IME変換確定のEnterは無視
           const v = inputEl.value;
           inputEl.value = '';
           if (busy) { if (v.trim()) typeahead.push(v); } // 先行入力（実ターミナル同様、前の出力後に実行される）

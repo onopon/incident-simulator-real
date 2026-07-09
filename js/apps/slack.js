@@ -103,9 +103,21 @@
     renderTyping();
   }
 
-  /* ---- 描画 ---- */
+  /* ---- 描画 ----
+     サイドバーは「差分更新」にする。クリック中(pointerdown〜click間)に
+     ボタンをDOMから作り直すと click が発火しなくなるため、全再構築は
+     チャンネル構成が変わったときだけ行う */
+  const chanBtns = new Map(); // chId -> button
   function renderSide() {
     if (!ui) return;
+    if (chanBtns.size !== channels.size || ![...chanBtns.values()].every((b) => b.isConnected)) {
+      rebuildSide();
+    }
+    for (const c of channels.values()) patchChanBtn(c);
+  }
+
+  function rebuildSide() {
+    chanBtns.clear();
     ui.side.innerHTML = '';
     ui.side.appendChild(el('div', 'sl-ws', 'AtlasWorks'));
     const chs = [...channels.values()].filter((c) => c.kind === 'channel');
@@ -119,13 +131,24 @@
   }
 
   function chanBtn(c, dm) {
-    const b = el('button', `sl-chan${c.id === activeId ? ' active' : ''}${c.unread ? ' unread' : ''}`);
-    b.innerHTML = dm
+    const b = el('button', 'sl-chan');
+    b.innerHTML = (dm
       ? `<span class="sl-presence"></span>${esc(c.name)}`
-      : `<span class="sl-hash">#</span>${esc(c.name)}`;
-    if (c.unread) b.appendChild(el('span', 'sl-badge', String(c.unread)));
+      : `<span class="sl-hash">#</span>${esc(c.name)}`) +
+      `<span class="sl-badge hidden"></span>`;
     b.onclick = () => switchTo(c.id);
+    chanBtns.set(c.id, b);
+    patchChanBtn(c);
     return b;
+  }
+
+  function patchChanBtn(c) {
+    const b = chanBtns.get(c.id);
+    if (!b) return;
+    b.className = `sl-chan${c.id === activeId ? ' active' : ''}${c.unread ? ' unread' : ''}`;
+    const badge = b.querySelector('.sl-badge');
+    badge.textContent = c.unread ? String(c.unread) : '';
+    badge.classList.toggle('hidden', !c.unread);
   }
 
   function renderHeader() {
@@ -244,7 +267,10 @@
       ui = { side, feed, typing, chips, input, header };
 
       send.onclick = sendFree;
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendFree(); });
+      /* 日本語入力の変換確定Enterでは送信しない（isComposing / keyCode 229 はIME処理中） */
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) sendFree();
+      });
       atBtn.onclick = () => IS.bus.emit('slack-mention-picker', { chId: activeId });
 
       if (!activeId && channels.size) activeId = channels.keys().next().value;
