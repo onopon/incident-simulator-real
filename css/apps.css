@@ -1,0 +1,375 @@
+/* ============================================================
+   INCIDENT: 02:17 REAL ― アプリ内スタイル
+   （Slack / AWS / Atlas / Terminal / Wiki）
+   ============================================================ */
+
+/* ============ Slack ============ */
+.slack-app { display: flex; height: 100%; background: #1a1d21; font-size: 13px; }
+
+.sl-side {
+  flex: 0 0 190px; background: #19171d; border-right: 1px solid #2c2a31;
+  display: flex; flex-direction: column; overflow-y: auto;
+}
+.sl-ws {
+  padding: 12px 14px; font-weight: 800; color: #fff; font-size: 14px;
+  border-bottom: 1px solid #2c2a31; display: flex; align-items: center; gap: 8px;
+}
+.sl-ws::after { content: "▾"; color: #9a97a1; font-size: 11px; }
+.sl-side-section { padding: 12px 8px 4px 14px; color: #9a97a1; font-size: 11.5px; letter-spacing: .04em; }
+.sl-chan {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%; text-align: left; background: none; border: none;
+  color: #b9b7bf; padding: 4px 10px 4px 16px; font-size: 13px; border-radius: 6px;
+  margin: 0 4px; width: calc(100% - 8px);
+}
+.sl-chan:hover { background: #26232b; }
+.sl-chan.active { background: #1164a3; color: #fff; }
+.sl-chan.unread { font-weight: 800; color: #fff; }
+.sl-chan .sl-hash { opacity: .6; font-weight: 400; }
+.sl-chan .sl-badge {
+  margin-left: auto; background: #e01e5a; color: #fff; border-radius: 9px;
+  font-size: 10.5px; font-weight: 700; min-width: 17px; height: 17px; padding: 0 5px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sl-presence { width: 8px; height: 8px; border-radius: 50%; background: #3ddc84; flex: 0 0 8px; }
+
+.sl-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.sl-header {
+  flex: 0 0 42px; display: flex; align-items: center; gap: 10px; padding: 0 14px;
+  border-bottom: 1px solid #2c2a31; color: #fff; font-weight: 800;
+}
+.sl-topic { font-weight: 400; color: #9a97a1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.sl-feed { flex: 1; overflow-y: auto; padding: 12px 16px; }
+.sl-msg { display: flex; gap: 10px; padding: 5px 6px; border-radius: 8px; }
+.sl-msg:hover { background: #222529; }
+.sl-msg.sl-mention-me { background: rgba(250, 200, 80, .08); border-left: 3px solid #f2c744; }
+.sl-avatar {
+  flex: 0 0 34px; width: 34px; height: 34px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 15px;
+}
+.sl-body { flex: 1; min-width: 0; }
+.sl-head { display: flex; align-items: baseline; gap: 8px; }
+.sl-name { font-weight: 800; color: #fff; font-size: 13.5px; }
+.sl-role { color: #9a97a1; font-size: 10.5px; }
+.sl-time { color: #9a97a1; font-size: 10.5px; }
+.sl-text { color: #d1d2d3; line-height: 1.65; margin-top: 1px; word-break: break-word; white-space: pre-wrap; }
+.sl-text .sl-at { color: #6fb0e8; background: rgba(29, 155, 209, .12); border-radius: 3px; padding: 0 3px; font-weight: 600; }
+.sl-text code {
+  font-family: var(--mono); font-size: 12px; background: #2c2a31;
+  border: 1px solid #3a373f; border-radius: 4px; padding: 0 4px; color: #e8912d;
+}
+.sl-text pre {
+  font-family: var(--mono); font-size: 11.5px; background: #101114;
+  border: 1px solid #3a373f; border-radius: 8px; padding: 9px 11px; margin: 6px 0;
+  white-space: pre-wrap; word-break: break-all; color: #c8ccd4; line-height: 1.55;
+}
+.sl-sysmsg { text-align: center; color: #9a97a1; font-size: 11.5px; padding: 8px 0; }
+.sl-daybreak {
+  display: flex; align-items: center; gap: 10px; color: #9a97a1; font-size: 11px; padding: 10px 0 4px;
+}
+.sl-daybreak::before, .sl-daybreak::after { content: ""; flex: 1; height: 1px; background: #2c2a31; }
+
+/* アラート型メッセージ（bot） */
+.sl-attach {
+  border-left: 3px solid #e01e5a; background: #222125; border-radius: 6px;
+  padding: 8px 12px; margin-top: 4px;
+}
+.sl-attach.warn { border-left-color: #f2c744; }
+.sl-attach.ok { border-left-color: #3ddc84; }
+.sl-attach-title { font-weight: 700; color: #fff; font-size: 12.5px; }
+.sl-attach-body { color: #b9b7bf; font-size: 12px; margin-top: 3px; white-space: pre-wrap; font-family: var(--mono); }
+
+/* スクリーンショット添付の再現 */
+.sl-shot {
+  margin-top: 6px; background: #fff; border-radius: 8px; padding: 10px 12px;
+  max-width: 330px; color: #1c1e21; font-size: 11px; cursor: default;
+  border: 1px solid #46424c;
+}
+.sl-shot-bar { color: #7a7f87; font-size: 10px; border-bottom: 1px solid #e2e5ea; padding-bottom: 5px; margin-bottom: 6px; }
+.sl-shot-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #eceff3; }
+.sl-shot-row .bad { color: #d43a36; font-weight: 700; }
+
+/* typing */
+.sl-typing { color: #9a97a1; font-size: 11.5px; padding: 4px 10px; height: 22px; }
+.sl-typing .dots::after { content: "…"; animation: blink 1.2s steps(3) infinite; }
+
+/* composer */
+.sl-composer { flex: 0 0 auto; padding: 8px 14px 12px; }
+.sl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; max-height: 88px; overflow-y: auto; }
+.sl-chip {
+  background: #232830; border: 1px solid #3d434e; color: #cfd3da;
+  border-radius: 14px; padding: 4px 12px; font-size: 12px;
+}
+.sl-chip:hover { border-color: #1d9bd1; color: #fff; background: #26313d; }
+.sl-chip.primary { border-color: #2eb67d; color: #7fe0b2; }
+.sl-chip.primary:hover { background: rgba(46, 182, 125, .12); }
+.sl-inputrow {
+  display: flex; gap: 8px; align-items: center;
+  background: #222529; border: 1px solid #565259; border-radius: 10px; padding: 6px 8px;
+}
+.sl-inputrow:focus-within { border-color: #9a97a1; }
+.sl-at-btn {
+  background: none; border: 1px solid #565259; color: #b9b7bf; border-radius: 7px;
+  width: 30px; height: 30px; font-weight: 800; font-size: 14px;
+}
+.sl-at-btn:hover { color: #fff; border-color: #9a97a1; }
+.sl-input {
+  flex: 1; background: none; border: none; outline: none; color: #d1d2d3; font-size: 13px;
+}
+.sl-send {
+  background: #007a5a; border: none; color: #fff; border-radius: 7px;
+  width: 34px; height: 30px; font-size: 14px;
+}
+.sl-send:hover { background: #148567; }
+
+/* ============ AWS コンソール ============ */
+.aws-app { display: flex; flex-direction: column; height: 100%; background: #f2f3f3; color: #16191f; font-size: 13px; }
+.aws-nav {
+  flex: 0 0 40px; background: #232f3e; color: #fff;
+  display: flex; align-items: center; gap: 14px; padding: 0 14px;
+}
+.aws-logo { font-weight: 900; font-style: italic; color: #ff9900; letter-spacing: .02em; }
+.aws-search {
+  background: #2b3b4e; border: 1px solid #47586d; color: #cbd3dc; border-radius: 5px;
+  font-size: 12px; padding: 4px 10px; width: 240px;
+}
+.aws-nav-right { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: #cbd3dc; }
+.aws-region { color: #ff9900; }
+
+.aws-body { flex: 1; display: flex; min-height: 0; }
+.aws-side {
+  flex: 0 0 175px; background: #fff; border-right: 1px solid #d5dbdb; overflow-y: auto; padding: 10px 0;
+}
+.aws-side-title { font-size: 11px; color: #687078; padding: 4px 16px; letter-spacing: .05em; }
+.aws-side-item {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 7px 16px; font-size: 13px; color: #16191f; border-left: 3px solid transparent;
+}
+.aws-side-item:hover { background: #f1faff; color: #0073bb; }
+.aws-side-item.active { border-left-color: #0073bb; background: #f1faff; color: #0073bb; font-weight: 700; }
+
+.aws-main { flex: 1; overflow-y: auto; padding: 18px 22px; min-width: 0; }
+.aws-h1 { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+.aws-crumb { font-size: 11.5px; color: #687078; margin-bottom: 12px; }
+.aws-card {
+  background: #fff; border: 1px solid #d5dbdb; border-radius: 8px;
+  padding: 16px 18px; margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+.aws-card h4 { font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.aws-note { font-size: 12px; color: #687078; line-height: 1.7; }
+.aws-btn {
+  background: #fff; border: 1px solid #545b64; color: #16191f; border-radius: 3px;
+  padding: 5px 14px; font-size: 12.5px; font-weight: 700;
+}
+.aws-btn:hover:not(:disabled) { background: #fafafa; border-color: #16191f; }
+.aws-btn.primary { background: #ff9900; border-color: #eb8c00; color: #16191f; }
+.aws-btn.primary:hover:not(:disabled) { background: #ffac31; }
+.aws-btn.danger { background: #d13212; border-color: #d13212; color: #fff; }
+.aws-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.aws-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.aws-table th {
+  text-align: left; color: #687078; font-weight: 700; border-bottom: 2px solid #eaeded;
+  padding: 7px 10px; white-space: nowrap;
+}
+.aws-table td { border-bottom: 1px solid #eaeded; padding: 7px 10px; white-space: nowrap; }
+.aws-table tr:hover td { background: #f7f8f8; }
+.aws-state { display: inline-flex; align-items: center; gap: 5px; }
+.aws-state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #1d8102; }
+.aws-state.warn::before { background: #eb8c00; }
+.aws-state.bad::before { background: #d13212; }
+.aws-state.off::before { background: #879596; }
+.aws-chartgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.aws-chart { background: #fff; border: 1px solid #d5dbdb; border-radius: 8px; padding: 12px 14px; }
+.aws-chart-title { font-size: 12px; font-weight: 700; color: #16191f; display: flex; justify-content: space-between; }
+.aws-chart-now { font-family: var(--mono); }
+.aws-chart-now.ok { color: #1d8102; } .aws-chart-now.warn { color: #eb8c00; } .aws-chart-now.crit { color: #d13212; }
+.aws-chart canvas { width: 100%; height: 110px; display: block; margin-top: 6px; }
+
+.aws-alarm { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid #eaeded; font-size: 12.5px; }
+.aws-alarm-state {
+  flex: 0 0 84px; text-align: center; border-radius: 3px; font-size: 11px; font-weight: 800; padding: 3px 0;
+  background: #f2f3f3; color: #687078;
+}
+.aws-alarm-state.alarm { background: #d13212; color: #fff; }
+.aws-alarm-state.ok { background: #1d8102; color: #fff; }
+
+.aws-logbox {
+  background: #16191f; color: #c9d1d9; font-family: var(--mono); font-size: 11.5px;
+  border-radius: 6px; padding: 12px 14px; margin-top: 10px;
+  white-space: pre-wrap; word-break: break-all; line-height: 1.65;
+  max-height: 300px; overflow-y: auto;
+}
+.aws-select {
+  border: 1px solid #aab7b8; border-radius: 3px; padding: 6px 10px; font-size: 12.5px;
+  background: #fff; max-width: 100%;
+}
+.aws-progress { height: 4px; background: #eaeded; border-radius: 2px; overflow: hidden; margin: 10px 0; }
+.aws-progress > div { height: 100%; background: #0073bb; width: 0%; transition: width .3s; }
+.aws-flash {
+  border-radius: 6px; padding: 10px 14px; font-size: 12.5px; margin-bottom: 14px;
+  border: 1px solid #0073bb; background: #f1faff;
+}
+.aws-flash.warn { border-color: #eb8c00; background: #fff8ec; }
+
+/* ============ Atlas（ブラウザ内ブラウザ） ============ */
+.atlas-app { display: flex; flex-direction: column; height: 100%; background: #dee1e6; }
+.atlas-chrome { flex: 0 0 40px; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+.atlas-navbtn { background: none; border: none; color: #5f6368; font-size: 15px; padding: 4px 6px; border-radius: 50%; }
+.atlas-navbtn:hover { background: rgba(0,0,0,.08); }
+.atlas-urlbar {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: #fff; border-radius: 16px; padding: 5px 14px; font-size: 12.5px; color: #202124;
+  border: 1px solid #cdd1d6;
+}
+.atlas-lock { color: #1d8102; font-size: 11px; }
+.atlas-url { flex: 1; border: none; outline: none; font-size: 12.5px; color: #202124; font-family: var(--mono); }
+/* ページ内検索バー */
+.atlas-findbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; background: #f1f3f4; border-bottom: 1px solid #cdd1d6;
+}
+.atlas-find-input {
+  width: 240px; padding: 5px 12px; border: 1px solid #cdd1d6; border-radius: 14px;
+  font-size: 12.5px; outline: none; color: #202124; background: #fff;
+}
+.atlas-find-input:focus { border-color: #4aa3ff; }
+.atlas-find-count { font-size: 11.5px; color: #5f6368; min-width: 56px; font-family: var(--mono); }
+mark.at-find-hit { background: #ffe58a; color: #202124; border-radius: 2px; padding: 0 1px; }
+mark.at-find-hit.active { background: #ff9632; color: #fff; }
+
+.atlas-bookmarks { flex: 0 0 30px; display: flex; gap: 4px; align-items: center; padding: 0 12px; background: #dee1e6; }
+.atlas-bm {
+  background: none; border: none; font-size: 11.5px; color: #3c4043; padding: 3px 10px; border-radius: 12px;
+}
+.atlas-bm:hover { background: rgba(0,0,0,.08); }
+.atlas-view { flex: 1; background: #fff; overflow-y: auto; position: relative; color: #202124; }
+
+/* Atlasサイト本体 */
+.at-site { font-size: 13px; min-height: 100%; display: flex; flex-direction: column; }
+.at-header {
+  background: #14508c; color: #fff; padding: 14px 22px;
+  display: flex; align-items: baseline; gap: 14px;
+}
+.at-logo { font-size: 19px; font-weight: 900; letter-spacing: .05em; }
+.at-logo small { font-weight: 400; opacity: .7; font-size: 11px; margin-left: 8px; }
+.at-nav { margin-left: auto; display: flex; gap: 16px; font-size: 12px; opacity: .9; }
+.at-hero { background: linear-gradient(160deg, #e9f2fc, #f6fafe); padding: 26px 22px; }
+.at-hero h2 { font-size: 18px; color: #14508c; margin-bottom: 12px; }
+.at-searchbox { display: flex; gap: 8px; max-width: 560px; }
+.at-searchbox select, .at-searchbox button {
+  padding: 9px 12px; border: 1px solid #b9c4d2; border-radius: 6px; font-size: 13px; background: #fff;
+}
+.at-searchbox button { background: #e8618c; color: #fff; border-color: #e8618c; font-weight: 700; flex: 0 0 auto; }
+.at-searchbox button:hover { filter: brightness(1.05); }
+.at-content { padding: 18px 22px; flex: 1; }
+.at-shop {
+  display: flex; gap: 14px; border: 1px solid #e3e8ee; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+}
+.at-shop-thumb {
+  flex: 0 0 74px; height: 58px; border-radius: 8px;
+  background: linear-gradient(135deg, #cfe0f2, #a9c4e0); display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.at-shop-name { font-weight: 800; font-size: 14px; color: #1a3d63; }
+.at-shop-meta { font-size: 11.5px; color: #6b7686; margin-top: 3px; }
+.at-shop-meta .at-area { background: #eef3f9; border-radius: 4px; padding: 1px 7px; margin-right: 7px; color: #14508c; font-weight: 700; }
+.at-shop-meta .at-area.mismatch { background: #fdeaea; color: #c0392b; }
+.at-badge-star { color: #f5a623; }
+.at-footer { padding: 16px 22px; color: #9aa4b1; font-size: 11px; border-top: 1px solid #edf0f4; }
+
+/* 読み込み・エラー状態 */
+.at-loading { position: absolute; inset: 0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 5; }
+.at-spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid #dce3ec; border-top-color: #14508c; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.at-loading-note { color: #8b95a4; font-size: 12px; font-family: var(--mono); }
+.at-error { padding: 60px 30px; text-align: center; }
+.at-error h2 { font-size: 40px; color: #c8ccd4; font-family: var(--mono); }
+.at-error h3 { margin: 12px 0 8px; color: #3c4043; }
+.at-error p { color: #80868b; font-size: 12.5px; line-height: 1.8; }
+.at-progressbar { position: absolute; top: 0; left: 0; height: 3px; background: #4aa3ff; width: 0%; z-index: 6; transition: width .4s; }
+
+/* Atlas 管理画面 */
+.at-admin-header { background: #26303b; color: #fff; padding: 12px 22px; font-weight: 800; font-size: 14px; }
+.at-admin-header small { font-weight: 400; opacity: .6; margin-left: 10px; }
+.at-flag { display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #e6eaef; padding: 14px 6px; }
+.at-flag-name { font-family: var(--mono); font-weight: 700; font-size: 13px; }
+.at-flag-desc { font-size: 11.5px; color: #6b7686; margin-top: 2px; }
+.at-toggle {
+  margin-left: auto; flex: 0 0 46px; height: 26px; border-radius: 13px; border: none;
+  background: #c3cbd6; position: relative; transition: background .2s;
+}
+.at-toggle::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  background: #fff; border-radius: 50%; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.at-toggle.on { background: #2eb67d; }
+.at-toggle.on::after { left: 23px; }
+
+/* ============ ターミナル ============ */
+.term-app {
+  height: 100%; background: #0c0e12; color: #c8ccd4;
+  font-family: var(--mono); font-size: 12.5px; display: flex; flex-direction: column;
+}
+.term-scroll { flex: 1; overflow-y: auto; padding: 12px 14px; line-height: 1.6; }
+.term-line { white-space: pre-wrap; word-break: break-all; }
+.term-line .t-prompt { color: #3ddc84; }
+.term-line .t-prompt.remote { color: #ffcf5c; }
+.term-line .t-prompt.mysql { color: #6fb0e8; }
+.term-line.t-err { color: #f2837f; }
+.term-line.t-dim { color: #707a8f; }
+.term-line.t-warn { color: #ffcf5c; }
+.term-line.t-ok { color: #3ddc84; }
+.term-inputrow { display: flex; padding: 0 14px 6px; align-items: baseline; gap: 0; }
+.term-ps1 { color: #3ddc84; white-space: pre; }
+.term-ps1.remote { color: #ffcf5c; }
+.term-ps1.mysql { color: #6fb0e8; }
+.term-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: #e8ecf4; font-family: var(--mono); font-size: 12.5px; caret-color: #3ddc84;
+}
+.term-hints { padding: 6px 12px 10px; display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid #1c2230; }
+.term-hint {
+  background: #141924; border: 1px solid #273043; color: #8ea3c8;
+  font-family: var(--mono); font-size: 11px; border-radius: 5px; padding: 3px 9px;
+}
+.term-hint:hover { color: #fff; border-color: #3d5a86; }
+
+/* ============ Wiki ============ */
+.wiki-app { display: flex; height: 100%; background: #fbfbfa; color: #2f3437; font-size: 13.5px; }
+.wiki-side { flex: 0 0 200px; background: #f4f4f2; border-right: 1px solid #e4e4e0; padding: 14px 0; overflow-y: auto; }
+.wiki-side-title { font-size: 11px; color: #9b9a97; padding: 4px 16px 8px; letter-spacing: .05em; font-weight: 700; }
+.wiki-item {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 6px 16px; font-size: 13px; color: #2f3437;
+}
+.wiki-item:hover { background: #e9e9e6; }
+.wiki-item.active { background: #e3e2df; font-weight: 700; }
+.wiki-main { flex: 1; overflow-y: auto; padding: 26px 34px; line-height: 1.85; }
+.wiki-main h2 { font-size: 21px; margin-bottom: 4px; }
+.wiki-meta { color: #9b9a97; font-size: 11.5px; margin-bottom: 18px; }
+.wiki-main h3 { font-size: 15.5px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e4e4e0; }
+.wiki-main p { margin-bottom: 8px; }
+.wiki-main ul, .wiki-main ol { margin: 6px 0 10px 22px; }
+.wiki-main li { margin-bottom: 4px; }
+.wiki-main code {
+  font-family: var(--mono); font-size: 12px; background: #f1f0ee; border-radius: 4px;
+  padding: 1px 5px; color: #c0392b;
+}
+.wiki-main pre {
+  font-family: var(--mono); font-size: 12px; background: #2f3437; color: #e6e6e4;
+  border-radius: 8px; padding: 12px 16px; margin: 8px 0 14px; white-space: pre-wrap; line-height: 1.6;
+}
+.wiki-callout {
+  display: flex; gap: 10px; background: #fdf3e7; border: 1px solid #f5dcbb; border-radius: 8px;
+  padding: 12px 14px; margin: 10px 0; font-size: 12.5px;
+}
+.wiki-table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin: 8px 0 14px; }
+.wiki-table th, .wiki-table td { border: 1px solid #e4e4e0; padding: 6px 10px; text-align: left; }
+.wiki-table th { background: #f4f4f2; }

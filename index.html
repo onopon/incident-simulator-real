@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INCIDENT: 02:17 REAL ― リアルタイム障害対応シミュレータ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚨</text></svg>">
+<link rel="stylesheet" href="css/desktop.css">
+<link rel="stylesheet" href="css/apps.css">
+</head>
+<body data-sev="ok">
+
+<!-- ============ タイトル画面 ============ -->
+<div id="screen-title">
+  <div class="title-inner">
+    <p class="title-kicker">REALTIME INCIDENT RESPONSE SIMULATOR</p>
+    <h1 class="title-logo">INCIDENT: <span class="title-time">02:17</span> <span class="title-real">REAL</span></h1>
+    <p class="title-tagline">――そのアラートは、誰かが見つけるまで障害ではない</p>
+
+    <div class="title-desc">
+      <p>あなたは、15年モノの検索・予約サービス <b>「Atlas」</b> を運用するエンジニア。</p>
+      <p>今回は<b>物語を読む</b>のではありません。<b>あなた自身がデスクの前に座ります。</b></p>
+      <ul class="title-feature">
+        <li>💬 <b>Slack</b> ― メンションが飛んでくる。返事をするのも、しないのも、あなた次第</li>
+        <li>🟧 <b>AWSコンソール</b> ― CloudWatchのグラフ、EC2の再起動、WAFのルール追加</li>
+        <li>🌐 <b>Atlas本番サイト</b> ― ユーザーが見ているその画面を、自分の目で確かめる</li>
+        <li>⬛ <b>ターミナル</b> ― ssh、mysql、デプロイ。手を動かして調査する</li>
+        <li>📖 <b>社内Wiki</b> ― 手順書と過去の障害レポート。読む者だけが救われる</li>
+      </ul>
+      <p class="title-rule">
+        ⏱ ゲーム内時間は<b>現実の8倍速</b>で流れ続けます。考えている間も、障害は進行します。<br>
+        🕐 シフトは実時間で<b>最大30分</b>。障害を収束させ、振り返りまで終えてください。<br>
+        📊 シフト終了後、<b>5つの観点</b>であなたの判断が項目ごとに評価されます。
+      </p>
+    </div>
+
+    <div class="title-controls">
+      <label class="title-check"><input type="checkbox" id="opt-sound" checked> 効果音を有効にする</label>
+      <label class="title-check"><input type="checkbox" id="opt-fullscreen" checked> フルスクリーンで開始する（推奨）</label>
+    </div>
+
+    <button id="btn-start" class="btn-start">シフトを開始する</button>
+    <p class="title-credit">推奨環境: PCのモダンブラウザ（Chrome / Firefox / Edge）・画面幅 1280px 以上</p>
+  </div>
+</div>
+
+<!-- ============ デスクトップ ============ -->
+<div id="desktop" class="hidden">
+  <div id="wallpaper">
+    <div class="wp-logo">ATLAS OPS</div>
+    <div class="wp-sub">production workspace</div>
+  </div>
+
+  <!-- メニューバー -->
+  <header id="menubar">
+    <div class="mb-left">
+      <span class="mb-brand">🗻 Atlas Ops Desktop</span>
+      <span class="mb-status" id="mb-status">● ALL SYSTEMS OK</span>
+    </div>
+    <div class="mb-center">
+      <span class="mb-date" id="mb-date">7月6日(月)</span>
+      <span class="mb-clock" id="mb-clock">09:40</span>
+    </div>
+    <div class="mb-right">
+      <button class="mb-btn" id="mb-postmortem" style="display:none">📋 振り返りへ進む</button>
+      <span class="mb-shift" id="mb-shift" title="シフト残り時間（実時間）">🕐 30:00</span>
+      <button class="mb-btn" id="mb-sound" title="効果音 ON/OFF">🔊</button>
+      <button class="mb-btn" id="mb-fullscreen" title="フルスクリーン">⛶</button>
+    </div>
+  </header>
+
+  <!-- ウィンドウレイヤー -->
+  <div id="windows"></div>
+
+  <!-- 通知トースト -->
+  <div id="toasts"></div>
+
+  <!-- ドック -->
+  <nav id="dock">
+    <button class="dock-icon" data-app="slack" title="Slack"><span class="di-glyph">💬</span><span class="di-label">Slack</span><span class="di-badge hidden">0</span></button>
+    <button class="dock-icon" data-app="aws" title="AWS コンソール"><span class="di-glyph">🟧</span><span class="di-label">AWS</span><span class="di-badge hidden">0</span></button>
+    <button class="dock-icon" data-app="atlas" title="Atlas（本番サイト）"><span class="di-glyph">🌐</span><span class="di-label">Atlas</span><span class="di-badge hidden">0</span></button>
+    <button class="dock-icon" data-app="term" title="ターミナル"><span class="di-glyph">⬛</span><span class="di-label">Terminal</span><span class="di-badge hidden">0</span></button>
+    <button class="dock-icon" data-app="wiki" title="社内 Wiki"><span class="di-glyph">📖</span><span class="di-label">Wiki</span><span class="di-badge hidden">0</span></button>
+  </nav>
+
+  <div id="vignette"></div>
+</div>
+
+<!-- ============ 振り返りミーティング / 評価レポート ============ -->
+<div id="screen-meeting" class="hidden"></div>
+<div id="screen-report" class="hidden"></div>
+
+<!-- ============ モーダル ============ -->
+<div id="modal-layer" class="hidden"></div>
+
+<!-- 画面が狭いときの注意 -->
+<div id="too-small">
+  <div>
+    <h2>🖥️ PCでのプレイを推奨します</h2>
+    <p>このシミュレータは、複数のウィンドウ（Slack・AWS・ターミナル…）を行き来しながら障害対応する体験のため、画面幅 1000px 以上のPCブラウザ向けに設計されています。</p>
+  </div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/wm.js"></script>
+<script src="js/apps/slack.js"></script>
+<script src="js/apps/aws.js"></script>
+<script src="js/apps/atlas.js"></script>
+<script src="js/apps/terminal.js"></script>
+<script src="js/apps/wiki.js"></script>
+<script src="js/scenario.js"></script>
+<script src="js/report.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>
