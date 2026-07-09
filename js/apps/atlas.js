@@ -383,12 +383,19 @@
     },
   });
 
-  /* Atlasウィンドウが前面にあるときは ⌘F/Ctrl+F をページ内検索として扱う */
+  /* Atlasウィンドウが前面にあるときは ⌘F/Ctrl+F をページ内検索、
+     ⌘R/Ctrl+R をAtlasページのリロードとして扱う（ゲーム自体のリロードを防ぐ） */
   document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'F')) {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    if (e.key === 'f' || e.key === 'F') {
       if (IS.wm.isVisible('atlas')) {
         e.preventDefault();
         openFind();
+      }
+    } else if (e.key === 'r' || e.key === 'R') {
+      if (IS.wm.isVisible('atlas')) {
+        e.preventDefault();
+        navigate(currentUrl);
       }
     }
   });

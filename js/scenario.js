@@ -709,6 +709,20 @@
      ============================================================ */
   let lastUpdateGm = -99;
 
+  /* 経過共有の記録。
+     - 時刻はすべて shareLog に残す（評価では「空白の長さ」と「フェーズ網羅」を見る）
+     - 3ゲーム分以内の連投は1回の共有として集計する（updates） */
+  function recordShare() {
+    const c = st.counters;
+    const gm = IS.clock.gm;
+    c.shareLog = c.shareLog || [];
+    const burst = c.shareLog.length && gm - c.shareLog[c.shareLog.length - 1] < 3;
+    c.shareLog.push(gm);
+    lastUpdateGm = gm;
+    if (!burst) c.updates++;
+    return !burst;
+  }
+
   function chipsFor(chId) {
     const chips = [];
     const f = st.flags;
@@ -762,8 +776,7 @@
           slack().post(CH_INC, { from: 'me', body: `${IS.clock.fmt(IS.clock.gm)}時点の状況です。\n【確認できていること】APIのCPU使用率上昇・DB接続数が上限付近・複数画面の遅延/エラー\n【推測（未確認）】検索APIへの負荷集中が起点の可能性\n【対応】原因と影響範囲を調査中。新しい情報はこのチャンネルに集約します。` });
           st.mark('firstReport', '第一報を投稿（事実と推測を分離）');
           st.mark('firstReportFact', '第一報で事実と推測を区別した');
-          st.counters.updates++;
-          lastUpdateGm = IS.clock.gm;
+          recordShare();
           st.addParams({ orgTrust: 8 });
           slack().npcPost(CH_INC, 'mori', 'ありがとうございます。問い合わせには「原因調査中・復旧作業中」と案内しますね。', 1.5);
         },
@@ -774,6 +787,7 @@
           slack().post(CH_INC, { from: 'me', body: '原因はだいたい分かっています。すぐ直しますので少々お待ちください！' });
           st.mark('firstReport', '第一報を投稿');
           st.mark('promisedQuick', '根拠なく「すぐ直します」と宣言した');
+          recordShare();
           st.addParams({ orgTrust: 4 });
           slack().npcPost(CH_INC, 'obayashi', '頼もしい！よろしく！', 1);
         },
@@ -787,8 +801,7 @@
         run() {
           slack().post(CH_INC, { from: 'me', body: composeStatusUpdate() });
           st.mark(`update-${Math.round(IS.clock.gm)}!`, '経過を共有');
-          st.counters.updates++;
-          lastUpdateGm = IS.clock.gm;
+          recordShare();
           st.addParams({ orgTrust: 3 });
         },
       });
@@ -1019,7 +1032,7 @@
           slack().post(ch, { from: 'me', body: '@大林 修 経営層向けの要約です。\n' + composeStatusUpdate() });
           slack().npcPost(ch, 'obayashi', 'ありがとう、これで説明できる。判断に迷ったら遠慮なく相談して。止める判断ならおれが責任を持つ。', 1.5);
           st.mark('escalated', 'マネージャーへ整理された報告を実施');
-          st.counters.updates++;
+          recordShare();
           st.addParams({ orgTrust: 5 });
         },
       },
@@ -1088,12 +1101,14 @@
         return;
       }
     }
-    /* インシデントチャンネルへのまとまった発言は「経過共有」として扱う */
+    /* インシデントチャンネルへのまとまった発言は「経過共有」として扱う
+       （連投は1回の共有として集計。行動記録にも連投分は積まない） */
     if (chId === CH_INC && text.length >= 20 && st.has('incident') && !st.has('declared')) {
-      st.counters.updates++;
-      lastUpdateGm = IS.clock.gm;
-      st.mark(`update-free-${Math.round(IS.clock.gm)}!`, '経過を共有（自由入力）');
-      if (Math.random() < 0.6) slack().npcPost(chId, IS.pick(['obayashi', 'mori', 'takase']), IS.pick(['把握しました。', 'ありがとうございます、その方向でお願いします。', '共有ありがとうございます！']), 1.2);
+      const counted = recordShare();
+      if (counted) {
+        st.mark(`update-free-${Math.round(IS.clock.gm)}!`, '経過を共有（自由入力）');
+        if (Math.random() < 0.6) slack().npcPost(chId, IS.pick(['obayashi', 'mori', 'takase']), IS.pick(['把握しました。', 'ありがとうございます、その方向でお願いします。', '共有ありがとうございます！']), 1.2);
+      }
       return;
     }
     /* その他は軽い相槌 */
@@ -1133,6 +1148,53 @@
       setTimeout(() => {
         IS.notify('slack', { title: 'Atlas Ops Desktop', body: 'シフト開始。下のドックからアプリを行き来できます。まずはSlackを確認。', icon: '🗻' });
       }, 1200);
+    },
+
+    /* ---- セーブからの再開 ---- */
+    resume(save) {
+      st.started = true;
+      setupTimeline();
+      IS.engine.markDone(save.engineDone);
+      this.restoreOps(save.ops);
+      /* 完了コールバックが失われる進行中の一時状態を安全側へ倒す */
+      for (const k of ['restartingAll', 'rdsRebooting', 'lockStorm']) st.flags[k] = false;
+      slack().setChipsProvider(chipsFor);
+      if (st.has('postmortemReady')) IS.$('#mb-postmortem').style.display = '';
+      IS.wm.open('slack');
+      IS.clock.start();
+      setTimeout(() => {
+        IS.notify('slack', { title: 'Atlas Ops Desktop', body: `セーブ地点（${IS.clock.fmt(IS.clock.gm)}）からシフトを再開しました。`, icon: '🗻' });
+      }, 800);
+    },
+
+    /* ---- 運用状態のセーブ/ロード ---- */
+    serializeOps() {
+      return {
+        /* 再起動・起動中などの一時状態は「実行中」へ倒して保存する */
+        instances: instances.map((i) => ({ ...i, state: 'running' })),
+        featureFlags: { ...featureFlags },
+        wafRules: wafRules.filter((r) => !r.pending).map((r) => ({ ...r })),
+        disk03,
+        deployState: { ...deployState },
+        alterDone,
+        lastUpdateGm,
+      };
+    },
+    restoreOps(o) {
+      if (!o) return;
+      instances.length = 0;
+      instances.push(...o.instances.map((i) => ({ ...i })));
+      Object.assign(featureFlags, o.featureFlags);
+      wafRules.length = 0;
+      wafRules.push(...(o.wafRules || []));
+      desiredCapacity = Math.max(6, instances.filter((i) => i.type === 'api').length);
+      scalingNow = false;
+      flashMsg = null;
+      disk03 = typeof o.disk03 === 'number' ? o.disk03 : disk03;
+      Object.assign(deployState, o.deployState || {});
+      alterDone = !!o.alterDone;
+      lastUpdateGm = typeof o.lastUpdateGm === 'number' ? o.lastUpdateGm : -99;
+      IS.bus.emit('ops-changed');
     },
     endShift,
     canDeclare,
