@@ -1149,6 +1149,53 @@
         IS.notify('slack', { title: 'Atlas Ops Desktop', body: 'シフト開始。下のドックからアプリを行き来できます。まずはSlackを確認。', icon: '🗻' });
       }, 1200);
     },
+
+    /* ---- セーブからの再開 ---- */
+    resume(save) {
+      st.started = true;
+      setupTimeline();
+      IS.engine.markDone(save.engineDone);
+      this.restoreOps(save.ops);
+      /* 完了コールバックが失われる進行中の一時状態を安全側へ倒す */
+      for (const k of ['restartingAll', 'rdsRebooting', 'lockStorm']) st.flags[k] = false;
+      slack().setChipsProvider(chipsFor);
+      if (st.has('postmortemReady')) IS.$('#mb-postmortem').style.display = '';
+      IS.wm.open('slack');
+      IS.clock.start();
+      setTimeout(() => {
+        IS.notify('slack', { title: 'Atlas Ops Desktop', body: `セーブ地点（${IS.clock.fmt(IS.clock.gm)}）からシフトを再開しました。`, icon: '🗻' });
+      }, 800);
+    },
+
+    /* ---- 運用状態のセーブ/ロード ---- */
+    serializeOps() {
+      return {
+        /* 再起動・起動中などの一時状態は「実行中」へ倒して保存する */
+        instances: instances.map((i) => ({ ...i, state: 'running' })),
+        featureFlags: { ...featureFlags },
+        wafRules: wafRules.filter((r) => !r.pending).map((r) => ({ ...r })),
+        disk03,
+        deployState: { ...deployState },
+        alterDone,
+        lastUpdateGm,
+      };
+    },
+    restoreOps(o) {
+      if (!o) return;
+      instances.length = 0;
+      instances.push(...o.instances.map((i) => ({ ...i })));
+      Object.assign(featureFlags, o.featureFlags);
+      wafRules.length = 0;
+      wafRules.push(...(o.wafRules || []));
+      desiredCapacity = Math.max(6, instances.filter((i) => i.type === 'api').length);
+      scalingNow = false;
+      flashMsg = null;
+      disk03 = typeof o.disk03 === 'number' ? o.disk03 : disk03;
+      Object.assign(deployState, o.deployState || {});
+      alterDone = !!o.alterDone;
+      lastUpdateGm = typeof o.lastUpdateGm === 'number' ? o.lastUpdateGm : -99;
+      IS.bus.emit('ops-changed');
+    },
     endShift,
     canDeclare,
     CH_INC, CH_DEV, CH_ALERT, DM_TAKASE,

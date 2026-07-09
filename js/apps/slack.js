@@ -298,6 +298,28 @@
     refreshChips: () => renderChips(),
     get activeId() { return activeId; },
     channel: (id) => channels.get(id),
+
+    /* ---- セーブ/ロード ---- */
+    serialize() {
+      return {
+        activeId,
+        channels: [...channels.values()].map((c) => ({
+          id: c.id, name: c.name, kind: c.kind, topic: c.topic,
+          unread: c.unread, mentions: c.mentions,
+          msgs: c.msgs.map((m) => ({ ...m })),
+        })),
+      };
+    },
+    restore(data) {
+      channels.clear();
+      typingState.clear();
+      for (const c of data.channels || []) {
+        channels.set(c.id, { ...c, msgs: c.msgs || [] });
+      }
+      activeId = data.activeId && channels.has(data.activeId) ? data.activeId : (channels.keys().next().value || null);
+      updateDockBadge();
+      if (ui && activeId) switchTo(activeId);
+    },
   };
 
   /* シナリオ側から再描画を促すイベント */

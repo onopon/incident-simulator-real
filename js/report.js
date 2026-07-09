@@ -386,43 +386,189 @@
   }
 
   /* ============================================================
-     レポート描画
+     レポートデータの構築（共有リンク/エクスポートにも使う）
      ============================================================ */
-  function finish(reason) {
-    st().over = true;
-    IS.clock.stop();
-    IS.$('#screen-meeting').classList.add('hidden');
+  function buildData(reason) {
     const ev = evaluate(reason);
     const end = endingFor(reason, ev);
+    return {
+      v: 1,
+      app: 'incident-0217-real',
+      date: '2026-07-06',
+      playedAt: Date.now(),
+      reason,
+      rank: ev.rank,
+      overall: ev.overall,
+      ending: { title: end.title, body: end.body },
+      playSec: Math.floor(IS.clock.realElapsed),
+      recoveredGm: st().flags.recoveredAtGm || null,
+      cats: ev.cats.map((c) => ({
+        icon: c.icon, name: c.name, rank: c.rank, score: c.score,
+        items: c.items.map((i) => ({ label: i.label, verdict: i.verdict, comment: i.comment, gm: i.gm || null })),
+      })),
+      journal: st().journal.map((j) => ({ gm: j.gm, label: j.label })),
+      params: { ...st().params },
+    };
+  }
+
+  /* ============================================================
+     共有リンク（URLフラグメントにgzip+base64urlで埋め込む）
+     ============================================================ */
+  function b64urlEncode(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64urlDecode(s) {
+    const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  async function encodeShare(data) {
+    const json = JSON.stringify(data);
+    if (window.CompressionStream) {
+      const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+      const buf = await new Response(stream).arrayBuffer();
+      return 'g' + b64urlEncode(new Uint8Array(buf));
+    }
+    return 'j' + b64urlEncode(new TextEncoder().encode(json));
+  }
+
+  async function decodeShare(payload) {
+    const kind = payload[0];
+    const bytes = b64urlDecode(payload.slice(1));
+    if (kind === 'g') {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      return JSON.parse(await new Response(stream).text());
+    }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  /* ============================================================
+     エクスポート（共有リンク / 単体HTML / Markdown）
+     ============================================================ */
+  async function copyShareLink(data, btn) {
+    const payload = await encodeShare(data);
+    const url = `${location.origin}${location.pathname}#report=${payload}`;
+    await navigator.clipboard.writeText(url);
+    flashBtn(btn, '✔ コピーしました');
+  }
+
+  async function downloadHtml(data) {
+    let css = '';
+    try { css = await (await fetch('css/desktop.css')).text(); } catch (e) { /* file://等では素のHTMLで出力 */ }
+    const clone = IS.$('#screen-report').cloneNode(true);
+    clone.querySelectorAll('.report-actions, .report-export').forEach((n) => n.remove());
+    clone.classList.remove('hidden');
+    const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INCIDENT: 02:17 REAL ― シフト評価レポート（${esc(data.rank)}・${data.overall}点）</title>
+<style>${css}
+/* 単体ファイル用の調整 */
+#screen-report { position: static; }
+body { overflow: auto; }
+</style>
+</head>
+<body>${clone.outerHTML}</body>
+</html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    const d = new Date(data.playedAt);
+    const pad = (n) => String(n).padStart(2, '0');
+    a.href = URL.createObjectURL(blob);
+    a.download = `incident0217-report-${data.rank}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.html`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  function buildMarkdown(data) {
+    const lines = [];
+    lines.push(`# INCIDENT: 02:17 REAL ― シフト評価レポート`);
+    lines.push('');
+    lines.push(`**総合: ${data.rank}（${data.overall} / 100）** ― ${data.ending.title}`);
+    lines.push('');
+    lines.push(`- プレイ時間: ${Math.floor(data.playSec / 60)}分${data.playSec % 60}秒`);
+    lines.push(`- 障害収束: ${data.recoveredGm ? `${IS.clock.fmt(data.recoveredGm)}（発生から${Math.round(data.recoveredGm - INCIDENT_GM)}分）` : '未収束'}`);
+    lines.push('');
+    for (const c of data.cats) {
+      lines.push(`## ${c.icon} ${c.name} ― ${c.rank}（${c.score}点）`);
+      for (const i of c.items) {
+        const ts = i.gm ? `（${IS.clock.fmt(i.gm)}）` : '';
+        lines.push(`- ${MARKS[i.verdict]} **${i.label}**${ts}: ${i.comment}`);
+      }
+      lines.push('');
+    }
+    lines.push('## 🕐 行動記録');
+    for (const j of data.journal) lines.push(`- ${IS.clock.fmt(j.gm)} ${j.label}`);
+    lines.push('');
+    lines.push('## 🎛 内部パラメータ');
+    const P_LABELS = { health: 'サービス健全性', userTrust: 'ユーザー信頼度', orgTrust: '組織信頼度', bizImpact: '事業影響', debt: '技術的負債', fatigue: 'チーム疲労度' };
+    for (const [k, label] of Object.entries(P_LABELS)) lines.push(`- ${label}: ${Math.round(data.params[k])}`);
+    return lines.join('\n');
+  }
+
+  function flashBtn(btn, text) {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = text;
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+  }
+
+  /* ============================================================
+     レポート描画（data駆動: 自分のプレイでも共有リンクでも同じ）
+     ============================================================ */
+  function render(data, opts = {}) {
     const screen = IS.$('#screen-report');
     screen.classList.remove('hidden');
     screen.innerHTML = '';
     const inner = el('div', 'report-inner');
     screen.appendChild(inner);
 
-    inner.appendChild(el('p', 'report-kicker', 'INCIDENT REPORT ― 2026-07-06'));
+    inner.appendChild(el('p', 'report-kicker',
+      opts.shared ? 'SHARED INCIDENT REPORT ― 2026-07-06（共有されたレポート）' : 'INCIDENT REPORT ― 2026-07-06'));
     inner.appendChild(el('h1', 'report-title', 'シフト評価レポート'));
-    const playSec = Math.floor(IS.clock.realElapsed);
-    const recov = st().flags.recoveredAtGm;
     inner.appendChild(el('p', 'report-sub',
-      `プレイ時間 ${Math.floor(playSec / 60)}分${playSec % 60}秒 ／ ` +
-      `障害収束: ${recov ? `${IS.clock.fmt(recov)}（発生から${Math.round(recov - INCIDENT_GM)}分）` : '未収束'}`));
+      `プレイ時間 ${Math.floor(data.playSec / 60)}分${data.playSec % 60}秒 ／ ` +
+      `障害収束: ${data.recoveredGm ? `${IS.clock.fmt(data.recoveredGm)}（発生から${Math.round(data.recoveredGm - INCIDENT_GM)}分）` : '未収束'}` +
+      (opts.shared ? ` ／ プレイ日時: ${new Date(data.playedAt).toLocaleString('ja-JP')}` : '')));
 
     /* ヒーロー */
     const hero = el('div', 'report-hero');
-    hero.appendChild(el('div', `report-rank rank-${ev.rank}`, ev.rank));
+    hero.appendChild(el('div', `report-rank rank-${data.rank}`, data.rank));
     const ht = el('div', 'report-hero-text');
-    ht.appendChild(el('div', 'report-ending-title', esc(end.title)));
-    ht.appendChild(el('div', 'report-ending-body', esc(end.body)));
-    ht.appendChild(el('div', '', `<span style="color:var(--dim);font-size:12px">総合スコア <b style="color:#fff;font-family:var(--mono)">${ev.overall} / 100</b></span>`));
+    ht.appendChild(el('div', 'report-ending-title', esc(data.ending.title)));
+    ht.appendChild(el('div', 'report-ending-body', esc(data.ending.body)));
+    ht.appendChild(el('div', '', `<span style="color:var(--dim);font-size:12px">総合スコア <b style="color:#fff;font-family:var(--mono)">${data.overall} / 100</b></span>`));
     hero.appendChild(ht);
     inner.appendChild(hero);
+
+    /* エクスポート */
+    const ex = el('div', 'report-export');
+    const linkBtn = el('button', 'btn', '🔗 共有リンクをコピー');
+    linkBtn.title = 'このURLを開くと、誰でもこのレポートを閲覧できます';
+    linkBtn.onclick = () => copyShareLink(data, linkBtn).catch(() => flashBtn(linkBtn, 'コピーに失敗しました'));
+    const htmlBtn = el('button', 'btn', '📄 HTMLファイルで保存');
+    htmlBtn.onclick = () => downloadHtml(data);
+    const mdBtn = el('button', 'btn', '📋 Markdownをコピー');
+    mdBtn.onclick = () => navigator.clipboard.writeText(buildMarkdown(data))
+      .then(() => flashBtn(mdBtn, '✔ コピーしました'))
+      .catch(() => flashBtn(mdBtn, 'コピーに失敗しました'));
+    ex.append(linkBtn, htmlBtn, mdBtn);
+    inner.appendChild(ex);
 
     /* 5カテゴリ */
     inner.appendChild(el('div', 'report-section-title', '📊 5つの観点からの評価'));
     const grid = el('div', 'report-grid');
-    ev.cats.forEach((c, idx) => {
-      const card = el('div', `cat-card${idx === ev.cats.length - 1 && ev.cats.length % 2 === 1 ? ' wide' : ''}`);
+    data.cats.forEach((c, idx) => {
+      const card = el('div', `cat-card${idx === data.cats.length - 1 && data.cats.length % 2 === 1 ? ' wide' : ''}`);
       const head = el('div', 'cat-head');
       head.appendChild(el('span', 'cat-icon', c.icon));
       head.appendChild(el('span', 'cat-name', esc(c.name)));
@@ -453,7 +599,7 @@
     /* タイムライン */
     inner.appendChild(el('div', 'report-section-title', '🕐 あなたの行動記録'));
     const tl = el('div', 'report-timeline');
-    for (const e2 of st().journal) {
+    for (const e2 of data.journal) {
       const row = el('div', 'tl-row');
       row.appendChild(el('span', 'tl-time', IS.clock.fmt(e2.gm)));
       row.appendChild(el('span', 'tl-label', esc(e2.label)));
@@ -469,7 +615,7 @@
       ['bizImpact', '事業影響', false], ['debt', '技術的負債', false], ['fatigue', 'チーム疲労度', false],
     ];
     for (const [k, label, goodHigh] of P_DEFS) {
-      const v = Math.round(st().params[k]);
+      const v = Math.round(data.params[k]);
       const good = goodHigh ? v : 100 - v;
       const box = el('div', 'rp-box');
       box.appendChild(el('div', 'rp-label', esc(label)));
@@ -484,15 +630,39 @@
       'Webサービスは、コードだけで動いているわけではない。\nデータベース。インフラ。ログ。監視。仕様。ユーザー。事業。そして、サービスを運用する人々。\n\nインシデント対応とは、壊れたコードを直す作業ではない。\n不完全な情報の中で、何を守り、何を止め、何を後回しにするかを決断することだ。\n\n午前2時17分。Slackに、新しい通知が表示される。\nSentry: Error rate increased.\n\nあなたは、最初に何を確認する？'));
 
     const acts = el('div', 'report-actions');
-    const again = el('button', 'btn primary', 'もう一度シフトに入る');
+    const again = el('button', 'btn primary', opts.shared ? 'INCIDENT: 02:17 REAL を自分もプレイする' : 'もう一度シフトに入る');
     again.style.cssText = 'padding:13px 40px;font-size:15px;';
-    again.onclick = () => location.reload();
+    again.onclick = () => { location.href = location.pathname; };
     acts.appendChild(again);
     inner.appendChild(acts);
+  }
 
+  /* ============================================================
+     終了処理 / 共有リンクからの閲覧
+     ============================================================ */
+  function finish(reason) {
+    st().over = true;
+    IS.clock.stop();
+    IS.$('#screen-meeting').classList.add('hidden');
+    const data = buildData(reason);
+    if (IS.save) IS.save.clear(); // 終了したランのセーブは無効化
+    render(data);
     if (reason === 'dead') IS.sound.down();
     else IS.sound.ok();
   }
 
-  IS.report = { finish, startMeeting };
+  async function renderShared(payload) {
+    try {
+      const data = await decodeShare(payload);
+      if (!data || data.app !== 'incident-0217-real') throw new Error('bad payload');
+      IS.$('#screen-title').classList.add('hidden');
+      render(data, { shared: true });
+    } catch (e) {
+      console.error('shared report decode failed', e);
+      alert('共有レポートの読み込みに失敗しました。リンクが途中で切れていないか確認してください。');
+      location.href = location.pathname;
+    }
+  }
+
+  IS.report = { finish, startMeeting, renderShared };
 })();

@@ -40,7 +40,9 @@
     </div>
 
     <button id="btn-start" class="btn-start">シフトを開始する</button>
-    <p class="title-credit">推奨環境: PCのモダンブラウザ（Chrome / Firefox / Edge）・画面幅 1280px 以上</p>
+    <div id="resume-area"></div>
+    <p class="title-credit">推奨環境: PCのモダンブラウザ（Chrome / Firefox / Edge）・画面幅 1280px 以上<br>
+    💾 進行状況は30秒ごと＋ページ離脱時に自動保存されます（このブラウザ内）。メニューバーの💾で手動保存もできます。</p>
   </div>
 </div>
 
@@ -64,6 +66,7 @@
     <div class="mb-right">
       <button class="mb-btn" id="mb-postmortem" style="display:none">📋 振り返りへ進む</button>
       <span class="mb-shift" id="mb-shift" title="シフト残り時間（実時間）">🕐 30:00</span>
+      <button class="mb-btn" id="mb-save" title="進行状況を保存（30秒ごと＋離脱時にも自動保存）">💾</button>
       <button class="mb-btn" id="mb-sound" title="効果音 ON/OFF">🔊</button>
       <button class="mb-btn" id="mb-fullscreen" title="フルスクリーン">⛶</button>
     </div>
@@ -112,6 +115,7 @@
 <script src="js/apps/wiki.js"></script>
 <script src="js/scenario.js"></script>
 <script src="js/report.js"></script>
+<script src="js/save.js"></script>
 <script src="js/boot.js"></script>
 </body>
 </html>

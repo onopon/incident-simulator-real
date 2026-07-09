@@ -228,6 +228,12 @@
     },
     at(atGm, id, fire) { this.add({ id, at: atGm, fire }); },
     when(pred, id, fire) { this.add({ id, when: pred, fire }); },
+    /* セーブ/ロード用: 発火済みイベントIDの取得と復元 */
+    doneIds() { return events.filter((e) => e.done).map((e) => e.id); },
+    markDone(ids) {
+      const set = new Set(ids || []);
+      for (const ev of events) if (set.has(ev.id)) ev.done = true;
+    },
   };
 
   IS.bus.on('tick', ({ gm }) => {
