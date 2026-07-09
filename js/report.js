@@ -193,9 +193,43 @@
       else if (ratio >= 0.4) items.push(item('問いかけへの応答', 'ok', `応答率${Math.round(ratio * 100)}%。返事のない相手は、各自の判断で動き始める。`));
       else items.push(item('問いかけへの応答', 'bad', `${c.asksReceived}件の問いかけにほとんど応答しなかった（${c.asksAnswered}件）。`));
 
-      if (c.updates >= 3) items.push(item('経過共有の頻度', 'good', `${c.updates}回の経過共有。「今どうなっているか」を絶やさなかった。`));
-      else if (c.updates >= 1) items.push(item('経過共有の頻度', 'ok', `経過共有は${c.updates}回。障害対応中は15〜20分おきが目安。`));
-      else items.push(item('経過共有の頻度', 'bad', '経過を一度も共有しなかった。情報の空白は不信で埋まる。'));
+      /* 経過共有は回数ではなく「空白を作らなかったか」と「フェーズ網羅」で評価する。
+         3ゲーム分以内の連投は1回として集計済み（recordShare） */
+      {
+        const endRef = f.declaredGm || IS.clock.gm;
+        const shares = (c.shareLog || []).filter((g) => g >= INCIDENT_GM && g <= endRef).sort((a, b) => a - b);
+        const winLen = Math.round(endRef - INCIDENT_GM);
+        if (!shares.length) {
+          items.push(item('経過共有のリズム', 'bad', `障害発生からの${winLen}分間、状況を一度も発信しなかった。情報の空白は不信で埋まる。`));
+          items.push(item('経過共有のフェーズ網羅', 'bad', '発生直後・対応中・収束前のどのフェーズでも発信がなかった。'));
+        } else {
+          /* 最大空白（第一報までは8分の猶予を見る） */
+          let prev = INCIDENT_GM + 8;
+          let maxGap = 0;
+          for (const g of shares) {
+            if (g > prev) maxGap = Math.max(maxGap, g - prev);
+            prev = Math.max(prev, g);
+          }
+          maxGap = Math.max(maxGap, endRef - prev);
+          const gapR = Math.round(maxGap);
+          if (maxGap <= 15) items.push(item('経過共有のリズム', 'good', `共有の最大空白は${gapR}分。「15〜20分おき」の目安を守り、関係者を置き去りにしなかった（計${c.updates}回・連投は1回として集計）。`));
+          else if (maxGap <= 25) items.push(item('経過共有のリズム', 'ok', `最長で${gapR}分の空白があった。手を動かしている時間ほど、ひとこと残す価値がある。`));
+          else items.push(item('経過共有のリズム', 'bad', `${gapR}分間なにも発信しない時間があった。その間、現場は憶測で動くしかない。`));
+
+          /* フェーズ網羅: 発生直後 / 対応中 / 収束前 */
+          const has = (a, b) => shares.some((g) => g >= a && g <= b);
+          const early = has(INCIDENT_GM, INCIDENT_GM + 15);
+          const late = has(Math.max(INCIDENT_GM, endRef - 15), endRef);
+          const midStart = INCIDENT_GM + 15;
+          const midEnd = endRef - 15;
+          const mid = (midEnd - midStart >= 8) ? has(midStart, midEnd) : true; // 短時間で収束した場合は不問
+          const missing = [['発生直後', early], ['対応中', mid], ['収束前', late]]
+            .filter(([, v]) => !v).map(([n]) => n);
+          if (!missing.length) items.push(item('経過共有のフェーズ網羅', 'good', '発生直後・対応中・収束前のすべてのフェーズで状況を発信した。'));
+          else if (missing.length === 1) items.push(item('経過共有のフェーズ網羅', 'ok', `「${missing[0]}」の発信が抜けた。フェーズが変わる瞬間こそ、周囲は情報を欲しがる。`));
+          else items.push(item('経過共有のフェーズ網羅', 'bad', `発信があったのは限られた時間帯だけだった（抜け: ${missing.join('・')}）。`));
+        }
+      }
 
       if (!j('promisedQuick') && !j('promisedEta')) items.push(item('約束の管理', 'good', '根拠のない復旧時刻・安請け合いをしなかった。'));
       else if (j('promiseFallout') || j('etaFallout')) items.push(item('約束の管理', 'bad', '根拠のない約束が期限切れになり、信頼を削った。営業は顧客に謝罪する羽目になった。'));
