@@ -1,0 +1,8 @@
+services:
+  game:
+    build: .
+    container_name: incident-0217-real
+    ports:
+      # 元祖「INCIDENT: 02:17」のポート217へのオマージュ。
+      # 8217 なら特権ポート問題（rootless Docker等）も起きない
+      - "8217:80"
