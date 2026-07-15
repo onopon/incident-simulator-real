@@ -39,7 +39,6 @@
       '参加者: あなた、高瀬（ディレクター）、森（CS）、木下（営業）、大林（マネージャー）、伊藤（エンジニア）。\nスクリーンには今日の時系列が映し出されている。大林さんが口を開いた。\n\n「それで——今回の原因は、何だったんですか？」'));
 
     /* Q1: 原因の説明 */
-    inner.appendChild(el('div', 'meeting-q', 'Q1. あなたはどう説明する？'));
     const q1 = el('div', 'opt-list');
     const opt1 = el('button', 'opt-item');
     opt1.innerHTML = `<span class="opt-label">「クローラーによる大量アクセスです。WAFで制限済みなので、同種のアクセスは今後防げます」</span>
@@ -48,6 +47,8 @@
     opt2.innerHTML = `<span class="opt-label">「きっかけはクローラーです。ただ、クローラーが来ただけで全体が落ちる構造だったことが本当の問題です」</span>
       <span class="opt-desc">インデックス不足、深いOFFSET、再試行の嵐、放置された警告ログ、テストのない巨大Controller——構造を説明する。</span>`;
     q1.append(opt1, opt2);
+
+    inner.appendChild(el('div', 'meeting-q', 'Q1. あなたはどう説明する？'));
     inner.appendChild(q1);
 
     const step2 = el('div');
@@ -522,6 +523,18 @@ body { overflow: auto; }
     setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
   }
 
+  /* 共有データのjournalには、従来から振り返りの回答ラベルが含まれている。
+     そのためURLペイロードの形式を変えずに、選択UIをレポートへ再掲できる。 */
+  function postmortemChoices(data) {
+    const journal = data.journal || [];
+    const rca = journal.find((j) => j.label === '振り返りで構造的な原因を説明した' || j.label === '振り返りで原因を「外部要因」として説明した');
+    const tasks = journal.find((j) => j.label.startsWith('改善タスクを選定: '));
+    return {
+      rca: rca && (rca.label === '振り返りで構造的な原因を説明した' ? 'structural' : 'external'),
+      taskIds: tasks ? tasks.label.slice('改善タスクを選定: '.length).split(',').map((id) => id.trim()) : [],
+    };
+  }
+
   /* ============================================================
      レポート描画（data駆動: 自分のプレイでも共有リンクでも同じ）
      ============================================================ */
@@ -563,6 +576,43 @@ body { overflow: auto; }
       .catch(() => flashBtn(mdBtn, 'コピーに失敗しました'));
     ex.append(linkBtn, htmlBtn, mdBtn);
     inner.appendChild(ex);
+
+    /* 振り返りで選んだ回答（存在するレポートだけ表示） */
+    const choices = postmortemChoices(data);
+    if (choices.rca || choices.taskIds.length) {
+      inner.appendChild(el('div', 'report-section-title', '📝 振り返りで選択した内容'));
+      const postmortem = el('div', 'report-postmortem');
+
+      if (choices.rca) {
+        postmortem.appendChild(el('div', 'meeting-q', 'Q1. あなたはどう説明した？'));
+        const rcaList = el('div', 'opt-list');
+        const rcaOptions = [
+          { id: 'external', label: '「クローラーによる大量アクセスです。WAFで制限済みなので、同種のアクセスは今後防げます」', desc: '簡潔で、分かりやすい。「外部要因」という結論は誰も傷つけない。そして、何も変えない。' },
+          { id: 'structural', label: '「きっかけはクローラーです。ただ、クローラーが来ただけで全体が落ちる構造だったことが本当の問題です」', desc: 'インデックス不足、深いOFFSET、再試行の嵐、放置された警告ログ、テストのない巨大Controller——構造を説明する。' },
+        ];
+        for (const option of rcaOptions) {
+          const button = el('button', `opt-item report-choice-readonly${option.id === choices.rca ? ' checked' : ''}`);
+          button.disabled = true;
+          button.innerHTML = `<span class="opt-label">${esc(option.label)}</span><span class="opt-desc">${esc(option.desc)}</span>`;
+          rcaList.appendChild(button);
+        }
+        postmortem.appendChild(rcaList);
+      }
+
+      if (choices.taskIds.length) {
+        postmortem.appendChild(el('div', 'meeting-q', 'Q2. 次のスプリントに選んだ改善タスク'));
+        postmortem.appendChild(el('div', 'meeting-count', `選択済み: ${choices.taskIds.length} / 3`));
+        const taskList = el('div', 'opt-list');
+        for (const task of TASK_OPTIONS) {
+          const button = el('button', `opt-item report-choice-readonly${choices.taskIds.includes(task.id) ? ' checked' : ''}`);
+          button.disabled = true;
+          button.innerHTML = `<span class="opt-label">${esc(task.label)}</span><span class="opt-desc">${esc(task.desc)}</span>`;
+          taskList.appendChild(button);
+        }
+        postmortem.appendChild(taskList);
+      }
+      inner.appendChild(postmortem);
+    }
 
     /* 5カテゴリ */
     inner.appendChild(el('div', 'report-section-title', '📊 5つの観点からの評価'));
